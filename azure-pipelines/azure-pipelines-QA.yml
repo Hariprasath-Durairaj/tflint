@@ -12,8 +12,24 @@ variables:
   backendKey: 'qa.terraform.tfstate'
 
 stages:
+  - stage: Lint
+    displayName: 'Terraform Lint'
+    jobs:
+      - job: Lint
+        steps:
+          - checkout: self
+            persistCredentials: true
+
+          - script: |
+              echo "Installing tflint..."
+              curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+              tflint --init
+              tflint $(workingDirectory)
+            displayName: 'Run tflint on Terraform Code'
+
   - stage: Init
     displayName: 'Terraform Init'
+    dependsOn: Lint
     jobs:
       - job: Init
         steps:
