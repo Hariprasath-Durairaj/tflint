@@ -54,6 +54,12 @@ stages:
               ArtifactName: 'CheckovReport'
               publishLocation: 'Container'
 
+          - task: PublishSarifReport@1
+            displayName: 'Publish SARIF to Security Tab'
+            inputs:
+              sarifFile: 'checkov-report.sarif'
+              toolName: 'Checkov'
+
   - stage: Init
     displayName: 'Terraform Init'
     dependsOn: Scan
@@ -88,3 +94,12 @@ stages:
             displayName: 'Terraform Init'
             inputs:
               provider: 'azurerm'
+              command: 'init'
+              workingDirectory: '$(workingDirectory)'
+              backendServiceArm: '$(serviceConnection)'  # ✅ Required for backend
+              backendAzureRmResourceGroupName: '$(backendResourceGroup)'
+              backendAzureRmStorageAccountName: '$(backendStorageAccount)'
+              backendAzureRmContainerName: '$(backendContainerName)'
+              backendAzureRmKey: '$(backendKey)'
+              backendAzureRmUseOIDC: true
+              useTerraformVersion: '1.5.7'
