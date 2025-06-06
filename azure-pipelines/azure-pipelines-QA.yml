@@ -25,12 +25,28 @@ stages:
               echo "Installing tflint..."
               curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
               tflint --init
-              tflint --chdir=$(workingDirectory) || echo "TFLint found issues, but continuing..."
-            displayName: 'Run tflint on Terraform Code'
+              tflint --chdir=$(workingDirectory)
+            displayName: 'Run tflint'
+
+  - stage: Scan
+    displayName: 'Terraform Security Scan'
+    dependsOn: Lint
+    jobs:
+      - job: Scan
+        displayName: 'Checkov Terraform Scan'
+        steps:
+          - checkout: self
+
+          - script: |
+              echo "Installing Checkov..."
+              pip install checkov
+              echo "Running Checkov scan..."
+              checkov -d $(workingDirectory) --quiet --soft-fail false
+            displayName: 'Run Checkov'
 
   - stage: Init
     displayName: 'Terraform Init'
-    dependsOn: Lint
+    dependsOn: Scan
     jobs:
       - job: Init
         displayName: 'Terraform Initialization'
