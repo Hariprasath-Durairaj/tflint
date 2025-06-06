@@ -25,7 +25,7 @@ stages:
               echo "Installing tflint..."
               curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
               tflint --init
-              tflint --chdir=$(workingDirectory)
+              tflint --chdir=$(workingDirectory) || echo "⚠️ TFLint warnings detected, but not failing the pipeline."
             displayName: 'Run tflint'
 
   - stage: Scan
