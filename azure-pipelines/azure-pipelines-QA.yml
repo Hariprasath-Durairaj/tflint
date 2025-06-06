@@ -1,0 +1,47 @@
+trigger: none
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  workingDirectory: 'environments/QA'
+  serviceConnection: 'dhdp-infra-sp'
+  backendResourceGroup: 'dhdp-qat-resource-group'
+  backendStorageAccount: 'dhdplabsa'
+  backendContainerName: 'tfstate'
+  backendKey: 'qa/terraform.tfstate'
+
+stages:
+  - stage: Init
+    displayName: 'Terraform Init'
+    jobs:
+      - job: Init
+        displayName: 'Terraform Init Job'
+        steps:
+          - checkout: self
+
+          - script: |
+              if [ -d "$(Build.SourcesDirectory)/$(workingDirectory)" ]; then
+                cd "$(Build.SourcesDirectory)/$(workingDirectory)"
+                rm -rf .terraform
+                rm -f .terraform.lock.hcl
+              else
+                echo "Directory $(Build.SourcesDirectory)/$(workingDirectory) not found"
+                exit 1
+              fi
+            displayName: 'Clean .terraform and lockfile'
+
+          - task: TerraformInstaller@1
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: '1.5.7'
+
+          - script: |
+              cd "$(Build.SourcesDirectory)/$(workingDirectory)"
+              export TF_LOG=DEBUG
+              terraform init \
+                -backend-config="resource_group_name=$(backendResourceGroup)" \
+                -backend-config="storage_account_name=$(backendStorageAccount)" \
+                -backend-config="container_name=$(backendContainerName)" \
+                -backend-config="key=$(backendKey)"
+            displayName: 'Terraform Init (with debug logging)'
