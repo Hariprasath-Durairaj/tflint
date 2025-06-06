@@ -41,7 +41,7 @@ stages:
               echo "Installing Checkov..."
               pip install checkov
               echo "Running Checkov scan..."
-              checkov -d $(workingDirectory) --quiet --soft-fail false
+              checkov -d $(workingDirectory) --quiet
             displayName: 'Run Checkov'
 
   - stage: Init
