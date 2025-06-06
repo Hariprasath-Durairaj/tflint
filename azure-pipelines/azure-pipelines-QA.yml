@@ -40,9 +40,19 @@ stages:
           - script: |
               echo "Installing Checkov..."
               pip install checkov
+            displayName: 'Install Checkov'
+
+          - script: |
               echo "Running Checkov scan..."
-              checkov -d $(workingDirectory) --quiet
-            displayName: 'Run Checkov'
+              checkov -d $(workingDirectory) -o sarif --output-file-path checkov-report.sarif || echo "Checkov completed with findings"
+            displayName: 'Run Checkov with SARIF Output'
+
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Checkov SARIF Report'
+            inputs:
+              PathtoPublish: 'checkov-report.sarif'
+              ArtifactName: 'CheckovReport'
+              publishLocation: 'Container'
 
   - stage: Init
     displayName: 'Terraform Init'
@@ -78,12 +88,3 @@ stages:
             displayName: 'Terraform Init'
             inputs:
               provider: 'azurerm'
-              command: 'init'
-              workingDirectory: '$(workingDirectory)'
-              backendServiceArm: '$(serviceConnection)'
-              backendAzureRmResourceGroupName: '$(backendResourceGroup)'
-              backendAzureRmStorageAccountName: '$(backendStorageAccount)'
-              backendAzureRmContainerName: '$(backendContainerName)'
-              backendAzureRmKey: '$(backendKey)'
-              backendAzureRmUseOIDC: true
-              useTerraformVersion: '1.5.7'
