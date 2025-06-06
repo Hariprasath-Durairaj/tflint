@@ -150,7 +150,6 @@ variable "default_node_pool" {
     name                        = string
     vm_size                     = string
     enable_auto_scaling         = bool
-    node_count                  = number
     min_count                   = number
     max_count                   = number
     max_pods                    = number
