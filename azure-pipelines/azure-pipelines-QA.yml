@@ -54,12 +54,6 @@ stages:
               ArtifactName: 'CheckovReport'
               publishLocation: 'Container'
 
-          - task: PublishSarifReport@1
-            displayName: 'Publish SARIF to Security Tab'
-            inputs:
-              sarifFile: 'checkov-report.sarif'
-              toolName: 'Checkov'
-
   - stage: Init
     displayName: 'Terraform Init'
     dependsOn: Scan
