@@ -1,127 +1,101 @@
 # DHDP QA Environment – Terraform Infrastructure
 
-This directory contains the Terraform configuration for provisioning the **Quality Assurance (QA)** environment for the **DHDP** in Microsoft Azure.
+This directory contains the Terraform configuration for provisioning the **Quality-Assurance (QA)** environment of the **DHDP** platform in Microsoft Azure.
 
 ---
 
-## 📁 Directory Contents
+## 📁 Directory Layout
 
 ```
 
-env/QA/
-├── backend.tf               # Remote state backend configuration
-├── main.tf                  # Root Terraform config for QA environment
-├── variables.tf             # Input variables
-├── outputs.tf               # Output values
-├── terraform.tfvars         # Environment-specific variable values
-└── version.tf               # Terraform and provider versions
+environments/QA/
+├── backend.tf            # Remote-state backend
+├── main.tf               # Root module for QA
+├── variables.tf          # Environment inputs
+├── terraform.tfvars      # QA-specific values
+├── outputs.tf            # Exposed IDs / URIs
+└── versions.tf           # Terraform & provider pinning
 
 ````
 
----
-
-## 🔧 Infrastructure Provisioned
-
-This QA environment leverages modules from `../terraform_modules/` to deploy:
-
-- **AKS Cluster**
-  - Multiple node pools (Bitnobi, Keycloak, CanDIG, Integrate.ai, WebApp)
-  - RBAC, autoscaling, and monitoring enabled
-- **Virtual Network**
-  - Custom subnets for AKS, VMs, and Bastion
-- **Application Gateway + WAF**
-  - Custom routing rules and OWASP-based WAF policies
-- **Private DNS Zones**
-  - Internal name resolution across peered VNets
-- **VNet Peering**
-  - Peering between shared hub and spoke VNets
-- **Bastion Host**
-  - Secure access to private VMs
-- **Public IPs, NSGs, and VPN Gateways**
-- **Key Vault**
-  - Stores secrets used during provisioning
-- **Backup and Recovery**
-  - Recovery Services Vault integration
+> **Note** The repo’s reusable building blocks live under `terraform-modules/`.
 
 ---
 
-## 🧱 Module Usage
+## 🔧 Infrastructure Deployed
 
-The following modules are called from `main.tf`:
-
-- `terraform-azure-aks`
-- `terraform-azure-vnet`
-- `terraform-azure-private-dns`
-- `terraform-azure-vnet-peering`
-- `terraform-azure-waf`
-- `terraform-azure-bastion`
-- `terraform-azure-keyvault`
-- `terraform-azure-public-ip`
-- `terraform-azure-tag-policy`
+| Layer | Details |
+|-------|---------|
+| **Compute / Orchestration** | Azure Kubernetes Service (**AKS**) with:<br>• Dedicated node pools: *bitnobi* | *keycloak* | *candig* | *integrateai* | *webapp*<br>• AAD-integrated RBAC, logging to Log Analytics, autoscaler enabled |
+| **Network** | Single VNet (<kbd>10.30.0.0/16</kbd>)<br>• Subnets: `aks`, `appgw`, `bastion`, etc.<br>• NAT Gateway for static egress<br>• NSG rules per subnet |
+| **Ingress** | **Application Gateway v2** with WAF (OWASP 3.2, Prevention) driven by **AGIC**; no in-cluster NGINX |
+| **Security / Secrets** | Key Vault (CMK-ready) + Disk Encryption Set |
+| **Governance** | Enterprise Tag Policy module enforcing 7 mandatory tags |
+| **Backup** | Recovery Services Vault (file & VM backups) |
+| **DNS** | Private DNS Zone linked to VNet |
+| **Connectivity (optional)** | Bastion host and VNet Peering to hub VNet |
 
 ---
 
-## ⚙️ How to Use
+## 🧱 Modules Called by `main.tf`
 
-### 1. Set Up Backend Storage
+| Module | Folder |
+|--------|--------|
+| AKS                       | `terraform-modules/terraform-azure-aks` |
+| Virtual Network           | `terraform-modules/terraform-azure-vnet` |
+| Application Gateway + WAF | `terraform-modules/terraform-azure-app-gateway`<br>`terraform-modules/terraform-azure-waf` |
+| NAT Gateway               | `terraform-modules/terraform-azure-nat-gateway` |
+| Private DNS               | `terraform-modules/terraform-azure-private-dns` |
+| Key Vault + DES           | `terraform-modules/terraform-azure-key-vault`<br>`terraform-modules/terraform-azure-disk-encryption-set` |
+| Tag Policy (enterprise)   | `terraform-modules/terraform-azure-tag-policy` |
+| Backup Vault, NSG, etc.   | Other modules in `terraform-modules/` |
 
-Ensure the backend defined in `backend.tf` exists (e.g., Azure Storage Account container for state):
+---
 
-```hcl
-terraform {
-  backend "azurerm" {
-    resource_group_name  = "dhdp-lab-resource-group"
-    storage_account_name = "dhdplabsa"
-    container_name       = "tfstate"
-    key                  = "qa.terraform.tfstate"
-  }
-}
-````
-
-### 2. Initialize Terraform
+## ⚙️ Workflow
 
 ```bash
-cd env/QA
+# 1) Initialise (remote-state & provider plugins)
+cd environments/QA
 terraform init
-```
 
-### 3. Review Planned Changes
-
-```bash
+# 2) Review planned infrastructure
 terraform plan -var-file=terraform.tfvars
-```
 
-### 4. Apply Changes
-
-```bash
+# 3) Apply to Azure
 terraform apply -var-file=terraform.tfvars
-```
+````
 
 ---
 
-## 🔐 Security Notes
+## 🏷️ Standard Tags (auto-enforced)
 
-* NSG rules restrict subnet access to internal IP ranges.
-* WAF policies protect the App Gateway endpoints.
-* VPN Gateway and Bastion are used for private management access.
-* Secrets such as ACR pull credentials are managed via Key Vault.
+| Key          | Example           |
+| ------------ | ----------------- |
+| environment  | `QA`              |
+| businessUnit | `corp`            |
+| application  | `dhdp`            |
+| owner        | `hari@corp.com`   |
+| managedBy    | `hello@dhdp-tfri` |
+| createdBy    | `Terraform`       |
+| criticality  | `Standard`        |
+
+The **tag-policy** module appends any missing tag with these defaults and blocks drift in production scopes.
 
 ---
 
-## 📌 Environment Tags
+## 🔐 Security Highlights
 
-Each resource is tagged for cost management and auditing:
-
-* `Environment = QA`
-* `Business_Unit = corp`
-* `ManagedBy = hello@dhdp-tfri`
-* `Purpose = testing-and-experimentation`
+* AKS control-plane private or IP-allow-listed
+* WAF in Prevention mode on App Gateway
+* NAT Gateway provides fixed egress IPs, SNAT-scaling
+* All secrets pulled from Key Vault; no plain-text in tfvars
 
 ---
 
 ## ✅ Prerequisites
 
-* Terraform v1.3+
-* Azure CLI logged in
-* Access to required Azure subscription
-* A properly configured remote backend
+* **Terraform ≥ 1.3** (lock file committed)
+* **AzureRM provider ≥ 3.0**
+* Azure CLI authenticated to the target subscription
+* State-storage account and container referenced in `backend.tf`
