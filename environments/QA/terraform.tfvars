@@ -8,7 +8,7 @@
 prefix               = "dhdp-qa"
 location             = "canadacentral"
 resource_group_name  = "dhdp-qa-rg"
-tenant_id            = "2135e496-4990-4b82-9b82-d8c62774306a"   # replace with real GUID
+tenant_id            = "c25c5028-2135-4990-9b82-d8c62774306a"
 
 tags = {
   environment  = "QA"
