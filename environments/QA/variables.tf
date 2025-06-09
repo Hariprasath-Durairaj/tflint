@@ -1,59 +1,58 @@
-# General Variables
+###############################################################################
+# variables.tf — QA Environment (AGIC-only, enterprise tag standard)        #
+###############################################################################
+
+############################
+# 1. Global
+############################
 variable "location" {
-  description = "Azure region for resources"
+  description = "Azure region for all resources"
   type        = string
 }
 
 variable "resource_group_name" {
-  description = "Name of the resource group"
+  description = "Resource-group name that hosts the QA stack"
   type        = string
 }
 
 variable "tenant_id" {
-  description = "Tenant ID"
+  description = "Azure Active Directory tenant GUID"
   type        = string
 }
 
 variable "tags" {
-  description = "Tags for resources"
+  description = "Standard enterprise tags applied to every resource"
   type        = map(string)
+  default = {
+    environment  = "QA"
+    businessUnit = "Corp-IT"
+    application  = "DHDP"
+    owner        = "hp@corp.com"
+    managedBy    = "Terraform"
+    createdBy    = "AzureDevOps"
+    criticality  = "Standard"
+  }
 }
 
-# Virtual Network (VNet)
-variable "vnet_name" {
-  description = "Name of the Virtual Network"
-  type        = string
-}
-
-variable "address_space" {
-  description = "Address space for the Virtual Network"
-  type        = list(string)
-}
-
+############################
+# 2. Virtual Network & NAT
+############################
+variable "vnet_name"   { description = "Virtual Network name"          type = string }
+variable "address_space" { description = "CIDR blocks for the VNet"   type = list(string) }
 variable "subnets" {
-  description = "Subnets to be created in the VNet"
+  description = "Subnet CIDR map (e.g., aks, appgw)"
   type        = map(list(string))
 }
 
-# Public IPs
-variable "public_ip_nginx_name" {
-  description = "Name of the public IP for NGINX Ingress"
-  type        = string
-}
+variable "nat_gateway_name"           { description = "NAT Gateway name"          type = string }
+variable "nat_gateway_public_ip_count"{ description = "Number of public IPs on the NAT GW (1–16)" type = number default = 1 }
 
-variable "public_ip_bastion_name" {
-  description = "The name of the public IP for Bastion"
-  type        = string
-}
-
-# Network Security Group (NSG)
-variable "nsg_name" {
-  description = "Name of the Network Security Group"
-  type        = string
-}
-
+############################
+# 3. Network Security
+############################
+variable "nsg_name" { description = "Network Security Group name" type = string }
 variable "nsg_security_rules" {
-  description = "List of NSG security rules"
+  description = "Custom NSG rules"
   type = list(object({
     name                       = string
     priority                   = number
@@ -67,218 +66,90 @@ variable "nsg_security_rules" {
   }))
 }
 
-# NAT Gateway
-variable "nat_gateway_name" {
-  description = "Name of the NAT Gateway"
-  type        = string
-}
+############################
+# 4. Private DNS
+############################
+variable "private_dns_name"       { description = "Private DNS Zone FQDN" type = string }
+variable "private_dns_link_name"  { description = "Link name for VNet ↔ DNS" type = string }
 
-# Bastion
-variable "bastion_name" {
-  description = "Name of the Bastion host"
-  type        = string
-}
+############################
+# 5. Key Vault & Encryption
+############################
+variable "key_vault_name"   { description = "Key Vault name"          type = string }
+variable "des_name"         { description = "Disk Encryption Set name" type = string }
+variable "key_vault_key_id" { description = "CMK Key ID (URI)"         type = string }
 
-# Private DNS
-variable "private_dns_name" {
-  description = "Name of the private DNS zone"
-  type        = string
-}
+############################
+# 6. Container Registry & Backup
+############################
+variable "acr_name"          { description = "Azure Container Registry name" type = string }
+variable "backup_vault_name" { description = "Recovery Services vault name"  type = string }
 
-variable "private_dns_link_name" {
-  description = "Name of the private DNS link"
-  type        = string
-}
-
-# VNet Peering
-variable "vnet_peering_name" {
-  description = "Name of the VNet peering"
-  type        = string
-}
-
-variable "remote_virtual_network_id" {
-  description = "ID of the remote virtual network"
-  type        = string
-}
-
-# Key Vault and Encryption
-variable "key_vault_name" {
-  description = "Name of the Azure Key Vault"
-  type        = string
-}
-
-variable "des_name" {
-  description = "Name of the Disk Encryption Set"
-  type        = string
-}
-
-variable "key_vault_key_id" {
-  description = "Key Vault Key ID"
-  type        = string
-}
-
-# Azure Container Registry (ACR)
-variable "acr_name" {
-  description = "Name of the Azure Container Registry (ACR)"
-  type        = string
-}
-
-# AKS Cluster Configuration
-variable "aks_name" {
-  description = "Name of the AKS cluster"
-  type        = string
-}
-
-variable "dns_prefix" {
-  description = "DNS prefix for the AKS cluster"
-  type        = string
-}
-
-variable "kubernetes_version" {
-  description = "Kubernetes version for AKS"
-  type        = string
-}
-
-variable "node_resource_group" {
-  description = "Resource group for AKS nodes"
-  type        = string
-}
+############################
+# 7. AKS configuration
+############################
+variable "aks_name"            { description = "AKS cluster name"               type = string }
+variable "dns_prefix"          { description = "DNS prefix for AKS API server"  type = string }
+variable "kubernetes_version"  { description = "Desired Kubernetes version"     type = string }
+variable "node_resource_group" { description = "Managed RG for AKS nodes"        type = string }
 
 variable "default_node_pool" {
-  description = "The default node pool configuration for AKS"
+  description = "System node pool settings"
   type = object({
-    name                        = string
-    vm_size                     = string
-    enable_auto_scaling         = bool
-    min_count                   = number
-    max_count                   = number
-    max_pods                    = number
-    os_disk_size_gb             = number
-    type                        = string
-    node_labels                 = map(string)
-    tags                        = map(string)
-    vnet_subnet_id              = string
-    temporary_name_for_rotation = optional(string)
-    availability_zones          = optional(list(string))
+    name                = string
+    vm_size             = string
+    enable_auto_scaling = bool
+    min_count           = number
+    max_count           = number
+    max_pods            = number
+    os_disk_size_gb     = number
+    node_labels         = map(string)
+    vnet_subnet_id      = string
+    availability_zones  = optional(list(string))
   })
 }
 
 variable "user_node_pools" {
-  description = "User node pools for AKS"
-  type        = map(any)
+  description = "Map of user-defined node pools"
+  type        = map(any)   # kept flexible; validated in module
 }
 
-# AKS Network
-variable "network_plugin" {
-  description = "Network plugin for AKS"
-  type        = string
-}
-
-variable "dns_service_ip" {
-  description = "DNS service IP for AKS"
-  type        = string
-}
-
-variable "service_cidr" {
-  description = "Service CIDR for AKS"
-  type        = string
-}
-
-variable "docker_bridge_cidr" {
-  description = "Docker bridge CIDR"
-  type        = string
-}
-
-# Log Analytics
-variable "log_analytics_name" {
-  description = "Name of the Log Analytics workspace"
-  type        = string
-}
-
-variable "log_retention" {
-  description = "Log retention in days"
-  type        = number
-}
-
-# Backup Vault
-variable "backup_vault_name" {
-  description = "Name of the Recovery Services Backup Vault"
-  type        = string
-}
+variable "network_plugin" { description = "azure | kubenet" type = string }
+variable "dns_service_ip"{ description = "Cluster DNS service IP" type = string }
+variable "service_cidr"  { description = "Service CIDR block"     type = string }
 
 variable "api_server_authorized_ip_ranges" {
-  description = "List of IPs allowed to access the AKS API server"
+  description = "CIDRs allowed to reach the AKS control plane"
   type        = list(string)
   default     = []
 }
 
-variable "private_cluster_enabled" {
-  description = "Whether the AKS cluster is private"
-  type        = bool
-  default     = false
-}
+############################
+# 8. Log Analytics
+############################
+variable "log_analytics_name" { description = "Log Analytics workspace name" type = string }
+variable "log_retention"     { description = "Retention (days)"              type = number }
 
-
-variable "enable_monitoring" {
-  description = "Enable monitoring (OMS agent) for AKS"
-  type        = bool
-  default     = true
-}
-
-
-variable "app_gateway_name" {
-  description = "Name of the Application Gateway"
-  type        = string
-}
-
-variable "app_gateway_subnet_name" {
-  description = "Name of the subnet for the Application Gateway"
-  type        = string
-}
-
-variable "app_gateway_frontend_port" {
-  description = "Frontend port for the Application Gateway"
-  type        = number
-}
-
+############################
+# 9. Application Gateway & WAF
+############################
+variable "app_gateway_name"            { description = "App Gateway name"          type = string }
+variable "app_gateway_subnet_name"     { description = "Subnet key for App GW"     type = string }
+variable "app_gateway_public_ip_name"  { description = "Public-IP name for App GW" type = string }
+variable "app_gateway_frontend_port"   { description = "Frontend HTTP port"        type = number }
+variable "app_gateway_backend_port"    { description = "Backend port forwarded"    type = number }
 variable "app_gateway_backend_ip_addresses" {
-  description = "List of backend IP addresses for the Application Gateway"
+  description = "Initial backend IPs (placeholder—AGIC overwrites)"
   type        = list(string)
+  default     = []
 }
-
-variable "app_gateway_backend_port" {
-  description = "Backend port number for App Gateway"
-  type        = number
-}
-
-variable "app_gateway_sku_name" {
-  description = "SKU name for Application Gateway"
-  type        = string
-}
-
-variable "app_gateway_sku_tier" {
-  description = "SKU tier for Application Gateway"
-  type        = string
-}
-
-variable "app_gateway_capacity" {
-  description = "Capacity for Application Gateway"
-  type        = number
-}
-
-variable "app_gateway_tags" {
-  description = "Tags for Application Gateway"
-  type        = map(string)
-  default     = {}
-}
-variable "app_gateway_public_ip_name" {
-  description = "Public IP resource name for Application Gateway"
-  type        = string
-  default     = null
-}
+variable "app_gateway_sku_name"  { description = "SKU name (e.g., WAF_v2)"   type = string }
+variable "app_gateway_sku_tier"  { description = "SKU tier"                  type = string }
+variable "app_gateway_capacity"  { description = "Instance count"            type = number }
+variable "app_gateway_tags"      { description = "Extra tags for App GW"      type = map(string) default = {} }
 
 variable "custom_rules" {
-  description = "Custom WAF rules for Application Gateway"
+  description = "Custom WAF rules (optional)"
   type        = list(any)
   default     = []
 }
