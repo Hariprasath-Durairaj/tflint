@@ -75,7 +75,7 @@ terraform apply -var-file=terraform.tfvars
 | environment  | `QA`              |
 | businessUnit | `corp`            |
 | application  | `dhdp`            |
-| owner        | `hari@corp.com`   |
+| owner        | `example@corp.com`|
 | managedBy    | `hello@dhdp-tfri` |
 | createdBy    | `Terraform`       |
 | criticality  | `Standard`        |
