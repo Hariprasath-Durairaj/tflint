@@ -1,67 +1,101 @@
 # Azure Tag Policy Terraform Module
 
-This Terraform module facilitates the creation and assignment of Azure Policy Definitions to enforce tagging standards across your Azure resources. It enables organizations to ensure that resources are consistently tagged, aiding in governance, cost management, and operational efficiency.
+This Terraform module creates **Azure Policy Definitions and their assignments** to enforce a consistent tagging standard across your Azure estate.  Ensuring that every resource carries the mandatory tags improves governance, FinOps charge‑back, and operational ownership.
 
-## 📁 Module Structure
+---
 
-* `main.tf` – Defines the Azure Policy Definition and its assignment.
-* `variables.tf` – Declares input variables for customization.
-* `output.tf` – Outputs relevant resource identifiers.
-* `versions.tf` – Specifies required Terraform and provider versions.
+## 📁 Module Structure
 
-## 🚀 Usage
+| File               | Purpose                                      |
+| ------------------ | -------------------------------------------- |
+| **`main.tf`**      | Builds the Policy Definition & Assignment    |
+| **`variables.tf`** | Declares all configurable inputs             |
+| **`outputs.tf`**   | Exposes IDs for the created policy resources |
+| **`versions.tf`**  | Locks Terraform & provider versions          |
+
+---
+
+## 🚀 Usage
 
 ```hcl
 module "tag_policy" {
   source = "../terraform_modules/terraform-azure-tag-policy"
 
-  policy_name             = "require-tags"
-  policy_display_name     = "Require Tags on Resources"
-  policy_description      = "Ensures that resources have the required tags."
-  required_tags           = ["Environment", "Owner"]
+  ### Policy configuration
+  policy_name         = "require-enterprise-tags"
+  policy_display_name = "Enforce Enterprise Tags on All Resources"
+  policy_description  = "Ensures that every resource is stamped with the mandatory enterprise tag set."
+
+  # Mandatory tag keys
+  required_tags = [
+    "environment",
+    "businessUnit",
+    "application",
+    "owner",
+    "managedBy",
+    "createdBy",
+    "criticality"
+  ]
+
+  ### Assignment configuration
   policy_assignment_scope = "/subscriptions/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  policy_assignment_name  = "require-tags-assignment"
+  policy_assignment_name  = "require-enterprise-tags-assignment"
+
+  ### Optional metadata tags applied to the policy itself
   tags = {
-    Environment = "QA"
-    ManagedBy   = "Terraform"
+    environment  = "QA"
+    businessUnit = "Corp-IT"
+    application  = "Platform-Governance"
+    owner        = "platform-team@corp.com"
+    managedBy    = "Terraform"
+    createdBy    = "AzureDevOps"
+    criticality  = "Standard"
   }
 }
 ```
 
+> **Replace** the `source` path and the `policy_assignment_scope` with values for your environment.
 
+---
 
-Replace `source` with the correct relative path to this module in your project.
+## 📥 Input Variables
 
-## 📥 Input Variables
+| Name                      | Description                                                | Type           | Default | Required |
+| ------------------------- | ---------------------------------------------------------- | -------------- | ------- | -------- |
+| `policy_name`             | Name for the Azure Policy Definition                       | `string`       | n/a     | ✅        |
+| `policy_display_name`     | Human‑readable display name                                | `string`       | n/a     | ✅        |
+| `policy_description`      | Detailed description of the policy intent                  | `string`       | n/a     | ✅        |
+| `required_tags`           | **List of tag keys** that every resource must include      | `list(string)` | n/a     | ✅        |
+| `policy_assignment_scope` | Scope for assignment (subscription, RG, or MG path)        | `string`       | n/a     | ✅        |
+| `policy_assignment_name`  | Name for the Policy Assignment                             | `string`       | n/a     | ✅        |
+| `tags`                    | Map of tags applied **to the policy resources themselves** | `map(string)`  | `{}`    | ❌        |
 
-| Name                      | Description                                                                       | Type           | Default | Required |   |
-| ------------------------- | --------------------------------------------------------------------------------- | -------------- | ------- | -------- | - |
-| `policy_name`             | Name of the Azure Policy Definition                                               | `string`       | n/a     | ✅        |   |
-| `policy_display_name`     | Display name for the Azure Policy                                                 | `string`       | n/a     | ✅        |   |
-| `policy_description`      | Description of the Azure Policy                                                   | `string`       | n/a     | ✅        |   |
-| `required_tags`           | List of tag keys that are required on resources                                   | `list(string)` | n/a     | ✅        |   |
-| `policy_assignment_scope` | Scope at which the policy will be assigned (e.g., subscription or resource group) | `string`       | n/a     | ✅        |   |
-| `policy_assignment_name`  | Name of the policy assignment                                                     | `string`       | n/a     | ✅        |   |
-| `tags`                    | Tags to apply to the policy resources                                             | `map(string)`  | `{}`    | ❌        |   |
+---
 
-## 📤 Outputs
+## 📤 Outputs
 
-| Output Name            | Description                               |   |
-| ---------------------- | ----------------------------------------- | - |
-| `policy_definition_id` | ID of the created Azure Policy Definition |   |
-| `policy_assignment_id` | ID of the Azure Policy Assignment         |   |
+| Output Name            | Description                          |
+| ---------------------- | ------------------------------------ |
+| `policy_definition_id` | Resource ID of the Policy Definition |
+| `policy_assignment_id` | Resource ID of the Policy Assignment |
 
-## ✅ Requirements
+---
 
-* Terraform `>= 1.3.0`
-* AzureRM Provider `~> 3.100`
+## ✅ Requirements
 
-## 🛡️ Best Practices
+* **Terraform** `>= 1.3.0`
+* **AzureRM provider** `~> 3.100`
 
-* Define a clear tagging strategy for your organization to ensure consistency.
-* Use Azure Policy to enforce tagging rules, preventing the creation of resources without the required tags.
-* Combine this module with other governance tools to maintain compliance across your Azure environment
+---
 
-## 📄 License
+## 🛡️ Best Practices
 
-This module is maintained by the DHDP CloudOps team. Contributions and feedback are welcome.
+1. Adopt a **single enterprise tag schema** (the seven keys above) and publish it internally.
+2. Use **Azure Policy** in *deny* mode for production subscriptions; start with *audit* in dev.
+3. Combine this module with cost‑management reports and Azure Lighthouse for full FinOps transparency.
+
+---
+
+## 📄 License
+
+Maintained by the **DHDP CloudOps** team.  Contributions & feedback welcome under the project’s CONTRIBUTING guidelines.
